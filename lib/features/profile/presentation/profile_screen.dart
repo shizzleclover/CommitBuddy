@@ -8,6 +8,8 @@ import '../logic/profile_providers.dart';
 import '../../auth/logic/auth_providers.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/achievements_service.dart';
+import '../../settings/presentation/accountability_settings_screen.dart';
+import '../../subscriptions/presentation/emergency_switches_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -787,6 +789,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 16),
           
           _buildSettingsTile(
+            icon: Icons.handshake_outlined,
+            title: 'Accountability System',
+            subtitle: 'Manage your commitment and accountability',
+            onTap: _openAccountabilitySettings,
+          ),
+          
+          _buildSettingsTile(
+            icon: Icons.security,
+            title: 'Emergency Switches',
+            subtitle: 'Avoid charges when life gets in the way',
+            onTap: _openEmergencySwitches,
+          ),
+          
+          _buildSettingsTile(
             icon: Icons.notifications_outlined,
             title: 'Notifications',
             subtitle: 'Manage your notification preferences',
@@ -1009,6 +1025,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       const SnackBar(
         content: Text('Data backup functionality coming soon!'),
         backgroundColor: AppColors.accentOrange,
+      ),
+    );
+  }
+
+  void _openAccountabilitySettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AccountabilitySettingsScreen(),
+      ),
+    );
+  }
+
+  void _openEmergencySwitches() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EmergencySwitchesScreen(),
       ),
     );
   }

@@ -217,6 +217,7 @@ class _BuddyScreenState extends ConsumerState<BuddyScreen>
             bottom: 16,
             right: 16,
             child: FloatingActionButton(
+              heroTag: "main_fab",
               onPressed: _toggleMenu,
               backgroundColor: _isMenuOpen ? AppColors.error : AppColors.primaryBlue,
               foregroundColor: AppColors.white,
@@ -312,13 +313,29 @@ class _BuddyScreenState extends ConsumerState<BuddyScreen>
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _navigateToInviteBuddy,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-              foregroundColor: AppColors.white,
+          SizedBox(
+            width: 160,
+            height: 44,
+            child: ElevatedButton(
+              onPressed: _navigateToInviteBuddy,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: AppColors.white,
+                elevation: 2,
+                shadowColor: AppColors.primaryBlue.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: Text(
+                'Invite Buddy',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.white,
+                ),
+              ),
             ),
-            child: const Text('Invite Buddy'),
           ),
         ],
       ),

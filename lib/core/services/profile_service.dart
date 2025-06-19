@@ -108,14 +108,44 @@ class ProfileService {
           .count();
 
       // Get current streak from routine_completions
-      final streakData = await _supabase.rpc('calculate_routine_streak',
-        params: {'user_id_param': user.id}
-      );
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      
+      // Get recent completions to calculate current streak
+      final recentCompletions = await _supabase
+          .from('routine_completions')
+          .select('completed_at')
+          .eq('user_id', user.id)
+          .gte('completed_at', todayStart.subtract(const Duration(days: 30)).toIso8601String())
+          .order('completed_at', ascending: false);
+
+      // Calculate current streak
+      int currentStreak = 0;
+      if (recentCompletions.isNotEmpty) {
+        final completionDates = <String>{};
+        for (final completion in recentCompletions) {
+          final date = DateTime.parse(completion['completed_at']);
+          final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          completionDates.add(dateKey);
+        }
+
+        // Count consecutive days from today backwards
+        var checkDate = today;
+        while (true) {
+          final dateKey = '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
+          if (completionDates.contains(dateKey)) {
+            currentStreak++;
+            checkDate = checkDate.subtract(const Duration(days: 1));
+          } else {
+            break;
+          }
+        }
+      }
 
       final stats = {
         'total_routines': routineStats['total_routines'] ?? 0,
         'completed_sessions': routineStats['completed_sessions'] ?? 0,
-        'current_streak': streakData ?? 0,
+        'current_streak': currentStreak,
         'longest_streak': routineStats['longest_streak'] ?? 0,
         'total_minutes': routineStats['total_minutes'] ?? 0,
         'buddies_count': buddyCountResponse.count ?? 0,

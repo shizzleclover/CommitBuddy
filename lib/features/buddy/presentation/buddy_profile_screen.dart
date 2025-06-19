@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/buddy.dart';
-import '../data/buddy_service.dart';
+import '../../../core/services/buddy_service.dart';
 
 class BuddyProfileScreen extends StatefulWidget {
   final Buddy buddy;
@@ -17,7 +17,6 @@ class BuddyProfileScreen extends StatefulWidget {
 }
 
 class _BuddyProfileScreenState extends State<BuddyProfileScreen> {
-  final BuddyService _buddyService = BuddyService();
   BuddyStats? _stats;
   bool _isLoading = true;
 
@@ -29,7 +28,7 @@ class _BuddyProfileScreenState extends State<BuddyProfileScreen> {
 
   Future<void> _loadStats() async {
     try {
-      final stats = await _buddyService.getBuddyStats(widget.buddy.id);
+      final stats = await BuddyService.getBuddyStats(widget.buddy.id);
       setState(() {
         _stats = stats;
         _isLoading = false;

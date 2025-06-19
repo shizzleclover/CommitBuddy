@@ -8,6 +8,12 @@ class AppColors {
   static const Color sageGreen = Color(0xFF9CAF88);
   static const Color lightSageGreen = Color(0xFFE8F5E8);
   
+  // Commonly referenced aliases
+  static const Color primary = primaryBlue;
+  static const Color background = backgroundPrimary;
+  static const Color cardBackground = white;
+  static const Color shadow = Color(0xFF64748B);
+  
   // Neutral Colors
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);

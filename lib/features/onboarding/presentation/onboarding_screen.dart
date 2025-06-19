@@ -5,6 +5,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/onboarding_page.dart';
 import '../../../app/router.dart';
+import 'commitment_onboarding_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -49,7 +50,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _navigateToAuth() {
-    AppRouter.pushReplacementNamed(context, AppRouter.login);
+    // Navigate to commitment onboarding first, then to auth
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CommitmentOnboardingScreen(),
+      ),
+    );
   }
 
   Widget _buildIllustration(IconData icon, Color color) {

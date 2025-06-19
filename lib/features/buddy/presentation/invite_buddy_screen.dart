@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_texts.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../data/buddy_service.dart';
+import '../../../core/services/buddy_service.dart';
+import '../logic/buddy_providers.dart';
 
-class InviteBuddyScreen extends StatefulWidget {
+class InviteBuddyScreen extends ConsumerStatefulWidget {
   const InviteBuddyScreen({super.key});
 
   @override
-  State<InviteBuddyScreen> createState() => _InviteBuddyScreenState();
+  ConsumerState<InviteBuddyScreen> createState() => _InviteBuddyScreenState();
 }
 
-class _InviteBuddyScreenState extends State<InviteBuddyScreen> {
+class _InviteBuddyScreenState extends ConsumerState<InviteBuddyScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
-  final BuddyService _buddyService = BuddyService();
   
-  List<Map<String, String>> _searchResults = [];
+  List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
   bool _isSending = false;
   String? _selectedUsername;
@@ -449,7 +450,7 @@ class _InviteBuddyScreenState extends State<InviteBuddyScreen> {
     setState(() => _isSearching = true);
     
     try {
-      final results = await _buddyService.searchUsers(query);
+      final results = await BuddyService.searchUsers(query);
       setState(() {
         _searchResults = results;
         _isSearching = false;
@@ -472,15 +473,22 @@ class _InviteBuddyScreenState extends State<InviteBuddyScreen> {
     setState(() => _isSending = true);
     
     try {
-      await _buddyService.sendInvitation(
+      final success = await BuddyService.sendInvitation(
         toUsername: _selectedUsername!,
         message: _messageController.text.isNotEmpty 
             ? _messageController.text 
             : null,
       );
       
-      _showSuccessSnackBar('Invitation sent successfully! 🎉');
-      Navigator.pop(context);
+      if (success) {
+        _showSuccessSnackBar('Invitation sent successfully! 🎉');
+        // Refresh buddy data in the provider
+        ref.read(buddyProvider.notifier).loadInvitations();
+        Navigator.pop(context);
+      } else {
+        setState(() => _isSending = false);
+        _showErrorSnackBar('Failed to send invitation');
+      }
     } catch (e) {
       setState(() => _isSending = false);
       _showErrorSnackBar(e.toString().replaceFirst('Exception: ', ''));

@@ -52,7 +52,7 @@ class CacheService {
 
   static List<Map<String, dynamic>> getBuddies() {
     final data = _userData.get('buddies');
-    return data != null ? List<Map<String, dynamic>>.from(data) : [];
+    return data != null ? _ensureListOfMaps(data) : [];
   }
 
   static Future<void> saveRoutines(List<Map<String, dynamic>> routines) async {
@@ -61,7 +61,7 @@ class CacheService {
 
   static List<Map<String, dynamic>> getRoutines() {
     final data = _userData.get('routines');
-    return data != null ? List<Map<String, dynamic>>.from(data) : [];
+    return data != null ? _ensureListOfMaps(data) : [];
   }
 
   // Settings methods
@@ -117,5 +117,29 @@ class CacheService {
   static DateTime? getLastSyncTime() {
     final timestamp = _settings.get('last_sync');
     return timestamp != null ? DateTime.fromMillisecondsSinceEpoch(timestamp) : null;
+  }
+
+  // Helper method to safely convert to List<Map<String, dynamic>>
+  static List<Map<String, dynamic>> _ensureListOfMaps(dynamic data) {
+    try {
+      if (data is List<Map<String, dynamic>>) {
+        return data;
+      } else if (data is List) {
+        return data.map((item) {
+          if (item is Map<String, dynamic>) {
+            return item;
+          } else if (item is Map) {
+            return Map<String, dynamic>.from(item);
+          } else {
+            throw Exception('Invalid item type in list: ${item.runtimeType}');
+          }
+        }).toList();
+      } else {
+        throw Exception('Data is not a list: ${data.runtimeType}');
+      }
+    } catch (e) {
+      print('❌ Error converting cached data: $e');
+      return [];
+    }
   }
 } 

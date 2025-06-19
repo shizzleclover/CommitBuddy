@@ -167,6 +167,7 @@ class CreatedRoutine {
   final DateTime createdAt;
   final DateTime? startDate;
   final bool isActive;
+  final bool isPinned;
 
   const CreatedRoutine({
     required this.id,
@@ -179,6 +180,7 @@ class CreatedRoutine {
     required this.createdAt,
     this.startDate,
     this.isActive = true,
+    this.isPinned = false,
   });
 
   CreatedRoutine copyWith({
@@ -192,6 +194,7 @@ class CreatedRoutine {
     DateTime? createdAt,
     DateTime? startDate,
     bool? isActive,
+    bool? isPinned,
   }) {
     return CreatedRoutine(
       id: id ?? this.id,
@@ -204,6 +207,7 @@ class CreatedRoutine {
       createdAt: createdAt ?? this.createdAt,
       startDate: startDate ?? this.startDate,
       isActive: isActive ?? this.isActive,
+      isPinned: isPinned ?? this.isPinned,
     );
   }
 

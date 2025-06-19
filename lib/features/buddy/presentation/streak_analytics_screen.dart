@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/services/analytics_service.dart';
 
 class StreakAnalyticsScreen extends StatefulWidget {
   const StreakAnalyticsScreen({super.key});
@@ -13,19 +14,235 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock data for analytics
-  final List<String> _weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  final List<List<int>> _habitHeatmap = [
-    [1, 0, 1, 1, 0, 1, 1], // Week 1
-    [1, 1, 0, 1, 1, 1, 0], // Week 2
-    [0, 1, 1, 1, 1, 0, 1], // Week 3
-    [1, 1, 1, 0, 1, 1, 1], // Week 4
-  ];
+  // Real data from Supabase
+  Map<String, dynamic> _dashboardData = {};
+  List<Map<String, dynamic>> _weeklyCompletions = [];
+  List<Map<String, dynamic>> _dailyStreakData = [];
+  Map<String, int> _categoryBreakdown = {};
+  Map<String, dynamic> _moodTrends = {};
+  List<Map<String, dynamic>> _routinePerformanceData = [];
+  List<List<int>> _realHeatmapData = [];
+  List<Map<String, String>> _personalInsights = [];
+  bool _isLoading = true;
+
+  // Week days for heatmap
+  final List<String> _weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  // Use real heatmap data instead of dummy data
+  List<List<int>> get _habitHeatmap => _realHeatmapData.isNotEmpty 
+      ? _realHeatmapData 
+      : [
+          [0, 0, 0, 0, 0, 0, 0], // Week 1 - empty until data loads
+          [0, 0, 0, 0, 0, 0, 0], // Week 2
+          [0, 0, 0, 0, 0, 0, 0], // Week 3
+          [0, 0, 0, 0, 0, 0, 0], // Week 4
+        ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadAnalyticsData();
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    try {
+      final results = await Future.wait([
+        AnalyticsService.getUserDashboardData(),
+        AnalyticsService.getWeeklyCompletions(),
+        AnalyticsService.getDailyStreakData(),
+        AnalyticsService.getCategoryBreakdown(),
+        AnalyticsService.getMoodAndDifficultyTrends(),
+        AnalyticsService.getRoutinePerformanceData(),
+        AnalyticsService.getHeatmapData(),
+        AnalyticsService.getPersonalInsights(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _dashboardData = results[0] as Map<String, dynamic>;
+          _weeklyCompletions = results[1] as List<Map<String, dynamic>>;
+          _dailyStreakData = results[2] as List<Map<String, dynamic>>;
+          _categoryBreakdown = results[3] as Map<String, int>;
+          _moodTrends = results[4] as Map<String, dynamic>;
+          _routinePerformanceData = results[5] as List<Map<String, dynamic>>;
+          _realHeatmapData = results[6] as List<List<int>>;
+          _personalInsights = results[7] as List<Map<String, String>>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading analytics data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Widget _buildCategoryBreakdownCard() {
+    if (_categoryBreakdown.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.lightGray.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.pie_chart,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Category Breakdown',
+                  style: AppTextStyles.headlineSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No routines yet',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final total = _categoryBreakdown.values.fold(0, (a, b) => a + b);
+    final categories = _categoryBreakdown.entries.toList();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.lightGray.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.pie_chart,
+                  color: AppColors.primaryBlue,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Category Breakdown',
+                style: AppTextStyles.headlineSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...categories.map((entry) {
+            final percentage = ((entry.value / total) * 100).round();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(entry.key),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _denormalizeCategoryName(entry.key),
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                  Text(
+                    '${entry.value} ($percentage%)',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'health':
+        return AppColors.accentGreen;
+      case 'work':
+        return AppColors.primaryBlue;
+      case 'personal':
+        return AppColors.accentOrange;
+      case 'learning':
+        return AppColors.accentPurple;
+      case 'habit':
+        return AppColors.lightGray;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _denormalizeCategoryName(String category) {
+    switch (category.toLowerCase()) {
+      case 'health':
+        return 'Health & Fitness';
+      case 'work':
+        return 'Work & Productivity';
+      case 'personal':
+        return 'Personal & Self Care';
+      case 'learning':
+        return 'Learning & Growth';
+      case 'habit':
+        return 'Habits & Lifestyle';
+      default:
+        return category;
+    }
   }
 
   @override
@@ -79,6 +296,12 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
   }
 
   Widget _buildOverviewTab() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -99,8 +322,8 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
           
           const SizedBox(height: 16),
           
-          // Recent Achievements
-          _buildRecentAchievements(),
+          // Category Breakdown
+          _buildCategoryBreakdownCard(),
         ],
       ),
     );
@@ -155,7 +378,7 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
                     ),
                   ),
                   Text(
-                    '12 Days',
+                    '${_dashboardData['current_streak'] ?? 0} Days',
                     style: AppTextStyles.headlineLarge.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
@@ -172,8 +395,8 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
             children: [
               Expanded(
                 child: _buildStreakStat(
-                  'Longest Streak',
-                  '28 days',
+                  'Best Streak',
+                  '${_dashboardData['longest_streak'] ?? 0} days',
                   Icons.emoji_events,
                 ),
               ),
@@ -184,9 +407,9 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
               ),
               Expanded(
                 child: _buildStreakStat(
-                  'This Week',
-                  '5/7 days',
-                  Icons.calendar_today,
+                  'Total Routines',
+                  '${_dashboardData['total_routines'] ?? 0}',
+                  Icons.assignment,
                 ),
               ),
             ],
@@ -223,13 +446,23 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
   }
 
   Widget _buildStatsGrid() {
+    final totalRoutines = _dashboardData['total_routines'] ?? 0;
+    final completedToday = _dashboardData['completed_today'] ?? 0;
+    final activeRoutines = _dashboardData['active_routines'] ?? 0;
+    final totalCompletions = _dashboardData['total_completions'] ?? 0;
+    
+    // Calculate completion rate
+    final completionRate = totalRoutines > 0 
+        ? ((totalCompletions / (totalRoutines * 30)) * 100).clamp(0, 100).round()
+        : 0;
+
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             title: 'Completion Rate',
-            value: '85%',
-            subtitle: 'This month',
+            value: '$completionRate%',
+            subtitle: 'Last 30 days',
             icon: Icons.trending_up,
             color: AppColors.accentGreen,
           ),
@@ -238,7 +471,7 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
         Expanded(
           child: _buildStatCard(
             title: 'Active Routines',
-            value: '3',
+            value: '$activeRoutines',
             subtitle: 'Currently running',
             icon: Icons.play_circle,
             color: AppColors.accentOrange,
@@ -383,6 +616,50 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
   }
 
   Widget _buildRecentAchievements() {
+    List<Map<String, String>> achievements = [];
+    
+    // Generate achievements based on real data
+    final currentStreak = _dashboardData['current_streak'] ?? 0;
+    final totalRoutines = _dashboardData['total_routines'] ?? 0;
+    final completedToday = _dashboardData['completed_today'] ?? 0;
+    final totalCompletions = _dashboardData['total_completions'] ?? 0;
+    
+    if (currentStreak >= 7) {
+      achievements.add({
+        'emoji': '🔥',
+        'title': '${currentStreak}-Day Streak',
+        'description': 'Maintained consistency for $currentStreak days',
+        'time': 'Current streak',
+      });
+    }
+    
+    if (completedToday >= 3) {
+      achievements.add({
+        'emoji': '⚡',
+        'title': 'Power User',
+        'description': 'Completed $completedToday routines today',
+        'time': 'Today',
+      });
+    }
+    
+    if (totalRoutines >= 5) {
+      achievements.add({
+        'emoji': '🎯',
+        'title': 'Routine Builder',
+        'description': 'Created $totalRoutines routines',
+        'time': 'Total',
+      });
+    }
+    
+    if (totalCompletions >= 20) {
+      achievements.add({
+        'emoji': '🏆',
+        'title': 'Habit Master',
+        'description': 'Completed $totalCompletions routine sessions',
+        'time': 'Lifetime',
+      });
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -407,24 +684,38 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _buildAchievementItem(
-            '🔥',
-            '10-Day Streak',
-            'Maintained consistency for 10 days',
-            '2 days ago',
-          ),
-          _buildAchievementItem(
-            '🏆',
-            'Week Warrior',
-            'Completed all routines this week',
-            '1 week ago',
-          ),
-          _buildAchievementItem(
-            '⭐',
-            'Early Bird',
-            'Completed morning routine 5 days in a row',
-            '2 weeks ago',
-          ),
+          if (achievements.isEmpty)
+            Column(
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  size: 48,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No achievements yet',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Complete more routines to unlock achievements!',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            )
+          else
+            ...achievements.map((achievement) => _buildAchievementItem(
+              achievement['emoji']!,
+              achievement['title']!,
+              achievement['description']!,
+              achievement['time']!,
+            )).toList(),
         ],
       ),
     );
@@ -636,16 +927,52 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
   }
 
   Widget _buildRoutinePerformanceList() {
-    final routines = [
-      {'name': 'Morning Routine', 'completion': 0.9, 'streak': 12},
-      {'name': 'Workout', 'completion': 0.75, 'streak': 8},
-      {'name': 'Night Routine', 'completion': 0.85, 'streak': 15},
-    ];
+    if (_routinePerformanceData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.assignment_outlined,
+              size: 48,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No routine data available',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Complete some routines to see performance data',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
-      children: routines.map((routine) {
-        final completion = routine['completion'] as double;
-        final streak = routine['streak'] as int;
+      children: _routinePerformanceData.map((routine) {
+        final completion = (routine['completion'] as double?) ?? 0.0;
+        final streak = (routine['streak'] as int?) ?? 0;
+        final name = routine['name'] as String? ?? 'Unknown Routine';
+        final emoji = routine['emoji'] as String? ?? '📝';
         
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -667,13 +994,19 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
               Row(
                 children: [
                   Text(
-                    routine['name'] as String,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                    emoji,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   Text(
                     '$streak day streak',
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -724,30 +1057,52 @@ class _StreakAnalyticsScreenState extends State<StreakAnalyticsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _buildInsightCard(
-            '🌅',
-            'Best Time to Exercise',
-            'You\'re 40% more likely to complete workouts in the morning',
-            'Based on your last 30 days',
-          ),
-          _buildInsightCard(
-            '📈',
-            'Consistency Trend',
-            'Your completion rate has improved by 15% this month',
-            'Keep up the great work!',
-          ),
-          _buildInsightCard(
-            '🔥',
-            'Streak Recovery',
-            'You typically bounce back within 2 days after missing a routine',
-            'Your resilience is improving',
-          ),
-          _buildInsightCard(
-            '🎯',
-            'Weekly Pattern',
-            'You\'re most consistent on weekdays, especially Tuesday-Thursday',
-            'Consider lighter weekend goals',
-          ),
+          if (_personalInsights.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outlined,
+                    size: 48,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No insights available yet',
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Complete more routines to generate personalized insights',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._personalInsights.map((insight) => _buildInsightCard(
+              insight['emoji'] ?? '💡',
+              insight['title'] ?? 'Insight',
+              insight['insight'] ?? 'No insight available',
+              insight['subtitle'] ?? '',
+            )).toList(),
         ],
       ),
     );

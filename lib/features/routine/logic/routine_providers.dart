@@ -37,20 +37,32 @@ class RoutineNotifier extends StateNotifier<RoutineState> {
   RoutineNotifier() : super(const RoutineState());
 
   // Load all user routines
-  Future<void> loadRoutines({bool fromCache = true}) async {
+  Future<List<CreatedRoutine>> loadRoutines({bool fromCache = true, bool includeArchived = false}) async {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      final routines = await RoutineService.getUserRoutines(fromCache: fromCache);
-      state = state.copyWith(
-        routines: routines,
-        isLoading: false,
+      final routines = await RoutineService.getUserRoutines(
+        fromCache: fromCache, 
+        includeArchived: includeArchived,
       );
+      
+      // Only update state if not including archived (for normal operation)
+      if (!includeArchived) {
+        state = state.copyWith(
+          routines: routines,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+      
+      return routines;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
       );
+      throw e;
     }
   }
 
@@ -310,6 +322,53 @@ class RoutineNotifier extends StateNotifier<RoutineState> {
     
     return state.routines.where((r) => r.repeatDays.contains(weekday)).toList();
   }
+
+  // Toggle routine pin status
+  Future<bool> toggleRoutinePin(String routineId) async {
+    try {
+      final success = await RoutineService.toggleRoutinePin(routineId);
+      
+      if (success) {
+        // Find the routine and update its pin status locally first for immediate UI feedback
+        final routineIndex = state.routines.indexWhere((r) => r.id == routineId);
+        if (routineIndex != -1) {
+          final routine = state.routines[routineIndex];
+          final updatedRoutine = routine.copyWith(isPinned: !routine.isPinned);
+          final updatedRoutines = List<CreatedRoutine>.from(state.routines);
+          updatedRoutines[routineIndex] = updatedRoutine;
+          
+          // Also update today's routines
+          final todayIndex = state.todayRoutines.indexWhere((r) => r.id == routineId);
+          List<CreatedRoutine> updatedTodayRoutines = List<CreatedRoutine>.from(state.todayRoutines);
+          if (todayIndex != -1) {
+            updatedTodayRoutines[todayIndex] = updatedRoutine;
+          }
+          
+          // Update state immediately
+          state = state.copyWith(
+            routines: updatedRoutines,
+            todayRoutines: updatedTodayRoutines,
+          );
+        }
+        
+        // Then refresh from server to ensure consistency
+        await Future.wait([
+          loadRoutines(fromCache: false),
+          loadTodayRoutines(),
+        ]);
+      }
+      
+      return success;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  // Get pinned routines
+  List<CreatedRoutine> getPinnedRoutines() {
+    return state.routines.where((r) => r.isPinned).toList();
+  }
 }
 
 // Individual Routine Analytics State
@@ -427,6 +486,12 @@ final routineStatsProvider = Provider<Map<String, int>>((ref) {
     'total': routines.length,
     'active': routines.where((r) => r.isActive).length,
     'today': routines.where((r) => r.repeatDays.contains(weekday)).length,
+    'pinned': routines.where((r) => r.isPinned).length,
     'categories': routines.map((r) => r.category).toSet().length,
   };
+});
+
+// Provider for pinned routines
+final pinnedRoutinesProvider = Provider<List<CreatedRoutine>>((ref) {
+  return ref.watch(routineProvider).routines.where((r) => r.isPinned).toList();
 }); 
